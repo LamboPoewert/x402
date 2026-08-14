@@ -264,6 +264,37 @@ const rentCleanup = svmUptoScheme.createRentCleanupManager(
 rentCleanup.start({ intervalSecs: 60 });
 ```
 
+#### Client compute budget options
+
+`UptoSvmScheme` (client) accepts optional compute budget overrides on its second argument:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `computeUnitLimit` | `number` | `90000` | `SetComputeUnitLimit` for the channel open transaction. Set to `0` to omit the instruction. Max accepted by the facilitator is `400000`. |
+| `computeUnitPriceMicroLamports` | `number` | `1` | `SetComputeUnitPrice` in microlamports per compute unit for the open transaction (paid by the facilitator fee payer). Set to `0` to omit the instruction. |
+
+```typescript
+const client = new x402Client();
+client.register(
+  "solana:*",
+  new UptoSvmScheme(signer, {
+    computeUnitLimit: 200000,              // raise for Token-2022 transfer hooks
+    computeUnitPriceMicroLamports: 10000,  // priority fee on the open transaction
+  }),
+);
+```
+
+#### Facilitator compute budget options
+
+`UptoSvmScheme` (facilitator) accepts compute budget options that apply to settlement transactions (claim, zero-charge cancel, and rent-cleanup close/distribute):
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `settleComputeUnitLimit` | `number` | `100000` | `SetComputeUnitLimit` for facilitator-submitted settlement transactions. Raise for compute-heavy Token-2022 extension mints (e.g. transfer hooks). Reclaim batches size themselves automatically and are not affected. |
+| `computeUnitPriceMicroLamports` | `number` | `1` | `SetComputeUnitPrice` in microlamports per compute unit for facilitator-submitted settlement transactions. Set to `0` to omit the instruction. |
+| `maxComputeUnits` | `number` | `400000` | Maximum compute unit limit accepted on the client's open transaction. |
+| `maxPriorityFeeMicroLamports` | `number` | `5000000` | Maximum compute unit price (microlamports) accepted on the client's open transaction. The facilitator pays this fee, so this bounds what a client can make it pay. |
+
 ### Examples
 
 * [TypeScript server example (EVM + SVM)](https://github.com/x402-foundation/x402/tree/main/examples/typescript/servers/upto)
