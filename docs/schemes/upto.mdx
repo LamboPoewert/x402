@@ -264,6 +264,23 @@ const rentCleanup = svmUptoScheme.createRentCleanupManager(
 rentCleanup.start({ intervalSecs: 60 });
 ```
 
+To route channel sends through your own paced or instrumented transport — for example, to respect a provider's `sendTransaction` rate limit — inject a pre-built RPC client via the `rpc` option. When `rpc` is provided it takes precedence over `rpcUrl`:
+
+```typescript
+import { createSolanaRpc } from "@solana/kit";
+import { toFacilitatorSvmSigner } from "@x402/svm";
+import { UptoSvmScheme } from "@x402/svm/upto/facilitator";
+
+const rpc = createSolanaRpc(process.env.SVM_RPC_URL);
+
+const svmUptoScheme = new UptoSvmScheme(toFacilitatorSvmSigner(keypair), {
+  rpc, // preferred over rpcUrl when both are set
+  maxChannelLifetimeSecs: 3600,
+});
+```
+
+The same `rpc` option is available on `UptoSvmRentCleanupManagerConfig` and is forwarded automatically when you call `createRentCleanupManager()`.
+
 ### Examples
 
 * [TypeScript server example (EVM + SVM)](https://github.com/x402-foundation/x402/tree/main/examples/typescript/servers/upto)
