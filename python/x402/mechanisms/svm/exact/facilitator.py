@@ -479,10 +479,9 @@ class ExactSvmScheme:
             # Wait for confirmation
             self._signer.confirm_transaction(signature, network)
         except Exception as e:
-            # The broadcast succeeded but confirmation couldn't be observed in time — this
-            # is non-terminal, so leave the dedup lock in place (a fresh broadcast would
-            # risk double-sending) and remember the signature so a retry reconciles via the
-            # pending-settlement fast path above instead of re-verifying and re-sending.
+            # Broadcast succeeded but confirmation timed out — non-terminal, so
+            # leave the dedup lock in place and remember the signature so a
+            # retry reconciles via the pending-settlement fast path above.
             self._pending_store.set(tx_key, signature)
             return SettleResponse(
                 success=False,

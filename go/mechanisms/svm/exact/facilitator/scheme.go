@@ -317,42 +317,47 @@ func (f *ExactSvmScheme) Settle(
 		return nil, x402.NewSettleError(ErrDuplicateSettlement, verifyResp.Payer, network, "", "duplicate transaction")
 	}
 
-	// Extract and validate feePayer from requirements matches transaction. These are all
-	// terminal (never-broadcast) failures reached after the dedup check above claimed the
-	// lock, so each must release it — otherwise a legitimate retry of the same payload
-	// would be wrongly rejected as a duplicate for the rest of the SettlementTTL window.
+	// Everything below until a successful broadcast is a terminal, never-broadcast
+	// failure and must release the dedup lock just claimed above — otherwise a
+	// legitimate retry of the same payload is wrongly rejected as a duplicate for
+	// the rest of the SettlementTTL window. releaseLock is turned off once the
+	// transaction is actually broadcast, since a confirmation timeout after that
+	// point must keep the lock held (see ConfirmTransaction below).
+	releaseLock := true
+	defer func() {
+		if releaseLock {
+			f.settlementCache.Delete(txKey)
+		}
+	}()
+
 	feePayerStr, ok := requirements.Extra["feePayer"].(string)
 	if !ok {
-		f.settlementCache.Delete(txKey)
 		return nil, x402.NewSettleError(ErrMissingFeePayer, verifyResp.Payer, network, "", "")
 	}
 
 	expectedFeePayer, err := solana.PublicKeyFromBase58(feePayerStr)
 	if err != nil {
-		f.settlementCache.Delete(txKey)
 		return nil, x402.NewSettleError(ErrInvalidFeePayer, verifyResp.Payer, network, "", err.Error())
 	}
 
 	// Verify transaction feePayer matches requirements
 	actualFeePayer := tx.Message.AccountKeys[0] // First account is fee payer
 	if actualFeePayer != expectedFeePayer {
-		f.settlementCache.Delete(txKey)
 		return nil, x402.NewSettleError(ErrFeePayerMismatch, verifyResp.Payer, network, "",
 			fmt.Sprintf("expected %s, got %s", expectedFeePayer, actualFeePayer))
 	}
 
 	// Sign with the feePayer's signer
 	if err := f.signer.SignTransaction(ctx, tx, expectedFeePayer, string(requirements.Network)); err != nil {
-		f.settlementCache.Delete(txKey)
 		return nil, x402.NewSettleError(ErrTransactionFailed, verifyResp.Payer, network, "", err.Error())
 	}
 
 	// Send transaction to network
 	signature, err := f.signer.SendTransaction(ctx, tx, string(requirements.Network))
 	if err != nil {
-		f.settlementCache.Delete(txKey)
 		return nil, x402.NewSettleError(ErrTransactionFailed, verifyResp.Payer, network, "", err.Error())
 	}
+	releaseLock = false
 
 	// Wait for confirmation
 	if err := f.signer.ConfirmTransaction(ctx, signature, string(requirements.Network)); err != nil {

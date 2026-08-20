@@ -602,13 +602,11 @@ func finishDepositSettle(
 // settlement_pending for the caller to retry again later.
 //
 // Known limitation: finishDepositSettle's unconfirmedBundleHash check (guarding
-// against a non-conforming ERC-20-approval extension signer returning a single hash
-// for what should be two broadcasts, where that hash is only the approve() and the
-// deposit() never ran) has no equivalent here, because that check needs the
-// pre-broadcast channel state this path doesn't have. A receipt success here is
-// trusted at face value. This only matters for a non-conforming extension signer
-// combined with a confirm-timeout on the original request — a narrow combination —
-// but a conforming signer (or the non-erc20Approval branches) is unaffected.
+// against a non-conforming ERC-20-approval extension signer that bundles a single
+// hash covering only approve(), never running deposit()) has no equivalent here,
+// since it needs the pre-broadcast channel state this path doesn't have — a
+// receipt success here is trusted at face value. Only affects a non-conforming
+// extension signer combined with a confirm-timeout on the original request.
 func reconcilePendingDeposit(
 	ctx context.Context,
 	signer evm.FacilitatorEvmSigner,

@@ -122,10 +122,10 @@ func WaitForSettleReceiptWithPendingStore(
 	invalidHashReason string,
 	revertedReason string,
 ) (*TransactionReceipt, error) {
-	// An invalid hash means nothing usable was ever broadcast, so there is nothing to
-	// reconcile against later: clear any stale entry instead of caching the garbage hash.
-	// Checked here (rather than relying on WaitForSettleReceipt's own check) so this
-	// function can tell "never broadcast" apart from a genuine wait failure below.
+	// An invalid hash means nothing usable was ever broadcast: clear any stale
+	// entry instead of caching the garbage hash. Checked here (rather than
+	// relying on WaitForSettleReceipt) to distinguish this from a genuine
+	// wait failure below.
 	if !IsValidTxHash(txHash) {
 		if store != nil && pendingKey != "" {
 			_ = store.Delete(ctx, pendingKey)

@@ -278,8 +278,8 @@ func (f *ExactEvmScheme) awaitEIP3009Settlement(
 	payer string,
 	txHash string,
 ) (*x402.SettleResponse, error) {
-	// An invalid hash means nothing usable was ever broadcast, so there is nothing to
-	// reconcile against later: clear any stale entry instead of caching the garbage hash.
+	// An invalid hash means nothing usable was ever broadcast: clear any
+	// stale entry instead of caching the garbage hash.
 	if !evm.IsValidTxHash(txHash) {
 		_ = f.pendingStore.Delete(ctx, pendingKey)
 		return nil, evm.InvalidBroadcastHashError(ErrTransactionFailed, payer, network, txHash)

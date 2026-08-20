@@ -52,27 +52,20 @@ def wait_for_receipt_and_build_response(
 ) -> SettleResponse:
     """Wait for a broadcast receipt and build the settlement response.
 
-    An invalid hash (nothing usable was ever broadcast) and an explicit validation
-    failure are terminal and clear the pending entry. A reverted receipt is also a
-    terminal, non-retryable outcome, but the pending entry is deliberately *kept* (not
-    cleared) so an identical-payload retry reconciles against the same already-mined
-    receipt instead of re-broadcasting — re-fetching a real, immutable on-chain receipt is
-    deterministic, so this is safe and mirrors the Go and TypeScript SDKs. A receipt-wait
-    failure, or an error raised while processing a confirmed receipt, leaves the broadcast
-    onchain with an unknown effect and returns settlement_pending with the hash.
-
     validate_receipt runs after a successful receipt (e.g. a Transfer event check): return a
     SettleResponse to fail settlement, or None to accept success. on_success, when set,
     builds the success response from the receipt.
 
-    When pending_store and pending_key are both provided, the store is updated so a
-    subsequent settle attempt for the same payload (typically the resource server's single
-    automatic retry) can reconcile against tx_hash instead of re-broadcasting: any outcome
-    that leaves the broadcast's effect unresolved or permanently on-chain (wait
-    failure/timeout, a reverted receipt, or an exception while processing a confirmed
-    receipt) records tx_hash; a resolved outcome with nothing to reconcile against (success,
-    an invalid hash, or an explicit validate_receipt rejection of a confirmed receipt) clears
-    it instead.
+    When pending_store and pending_key are both provided, they key a store that a subsequent
+    settle attempt for the same payload (typically the resource server's single automatic
+    retry) uses to reconcile against tx_hash instead of re-broadcasting. An outcome that
+    leaves the broadcast's effect unresolved or permanently on-chain — wait failure/timeout,
+    a reverted receipt, or an exception while processing a confirmed receipt — records
+    tx_hash (a reverted receipt is terminal but still recorded, so an identical-payload
+    retry reconciles against the same already-mined receipt instead of re-broadcasting,
+    mirroring the Go and TypeScript SDKs). A resolved outcome with nothing left to
+    reconcile — success, an invalid hash, or an explicit validate_receipt rejection —
+    clears it instead.
     """
 
     def _mark_pending() -> None:
