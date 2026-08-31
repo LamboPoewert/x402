@@ -89,6 +89,19 @@ const evmSigner = toFacilitatorEvmSigner(walletClient, {
 
 The default is `180_000` ms (3 minutes), matching viem's own default. In Python, pass `confirmation_timeout_seconds` to `FacilitatorWeb3Signer` (default `120`).
 
+You can also configure the gas limit for facilitator-sent transactions (settlement and ERC-6492 factory deploys) by passing `gas_limit` to `FacilitatorWeb3Signer`. The default is `500_000`, which covers known smart-account factory deploys with headroom. Increase this if your target network or smart-account factory requires more gas.
+
+```python
+from x402.mechanisms.evm import FacilitatorWeb3Signer
+
+signer = FacilitatorWeb3Signer(
+    private_key="0x...",
+    rpc_url="https://mainnet.base.org",
+    confirmation_timeout_seconds=25,  # set below your platform deadline
+    gas_limit=600_000,  # increase for smart-account factories that need more gas
+)
+```
+
 ### Duplicate Settlement (Solana)
 
 On Solana, a race condition can occur when the same payment transaction is submitted to a facilitator's `/settle` endpoint multiple times before the first submission is confirmed onchain. Because Solana's RPC returns "success" for duplicate submissions (the network deduplicates at the consensus level), the facilitator may return a successful settlement response for each call. A malicious client could exploit this to access multiple resources while only paying once.
