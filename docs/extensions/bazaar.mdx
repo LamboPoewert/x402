@@ -56,7 +56,20 @@ EXTENSION-RESPONSES: eyJiYXphYXIiOnsic3RhdHVzIjoicmVqZWN0ZWQiLCJyZWplY3RlZFJlYXN
 ```
 *(base64 of `{"bazaar":{"status":"rejected","rejectedReason":"info failed schema validation"}}`)*
 
-Clients that understand the `bazaar` extension should read the `bazaar` key of this header to confirm cataloging succeeded and surface any rejection reason for debugging.
+In the Python SDK, the `EXTENSION-RESPONSES` header is automatically decoded and made available as `context.extension_responses` in `on_after_verify` and `on_after_settle` server hooks — it is never forwarded to buyers. Use this to react to cataloging outcomes server-side:
+
+```python
+from x402.schemas.hooks import SettleResultContext, VerifyResultContext
+
+def handle_extension_responses(ctx: VerifyResultContext | SettleResultContext) -> None:
+    bazaar = (ctx.extension_responses or {}).get("bazaar", {})
+    status = bazaar.get("status")
+    if status == "rejected":
+        print(f"Bazaar rejected: {bazaar.get('rejectedReason')}")
+
+server.on_after_verify(handle_extension_responses)
+server.on_after_settle(handle_extension_responses)
+```
 
 #### Basic Flow
 
